@@ -1,0 +1,28 @@
+import { memberApi, memberProfileApi, registrationApi, paymentApi, classApi } from "./resources.js";
+import { authService } from "./authApi.js";
+import { scheduleService } from "./scheduleApi.js";
+import { trainingResultService } from "./trainingApi.js";
+export const memberService = {
+  async listMembers(filters = {}) { const [members, registrations, classes] = await Promise.all([memberApi.list(), registrationApi.list(), classApi.list()]); return members.map((m) => ({ ...m, registeredClasses: registrations.filter((r) => r.memberId === m.id && r.status !== "CANCELLED").map((r) => classes.find((c) => c.id === r.classId)).filter(Boolean) })).filter((m) => (!filters.query || [m.fullName, m.phone, m.id].join(" ").toLowerCase().includes(filters.query.toLowerCase())) && (!filters.level || m.level === filters.level)); },
+  async getMyProfile() {
+    try { return await memberProfileApi.get(); }
+    catch (error) { if (error.status === 404 && error.code !== "INVALID_RESPONSE") return null; throw error; }
+  },
+  async getMemberDetail(id) {
+    if (!id) return null;
+    const current = authService.getCurrentUser();
+    const self = current?.role === "MEMBER" && current.memberId === id;
+    const member = self ? await this.getMyProfile() : (await memberApi.list()).find((m) => m.id === id);
+    if (!member) return null;
+    // Updated BE explicitly rejects Receptionist reads of workout results.
+    const [registrations, payments, schedule, results] = await Promise.all([registrationApi.list(), paymentApi.list(), scheduleService.getMemberSchedule(id), current?.role === "RECEPTIONIST" ? Promise.resolve(null) : trainingResultService.listForMember(id)]);
+    return { ...member, registrations: registrations.filter((r) => r.memberId === id), payments: payments.filter((p) => p.memberId === id), schedule, results };
+  },
+  // Backend requires a pre-existing MEMBER User; no implicit account/payment creation.
+  createMember: (input) => memberApi.create(input),
+  createMyProfile: (input) => memberProfileApi.create(input),
+  updateProfile(id, input) {
+    const current = authService.getCurrentUser();
+    return current?.role === "MEMBER" && current.memberId === id ? memberProfileApi.update(input) : memberApi.update(id, input);
+  },
+};

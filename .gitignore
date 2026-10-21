@@ -141,3 +141,38 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# Local tests, internal documents and development utilities
+/tests/
+/docs/
+/scripts/
+
+# Screenshots, traces and generated test artifacts
+**/screenshots/
+**/screenshot/
+/test-results/
+/test-artifacts/
+/playwright-report/
+/playwright/.cache/
+/.playwright-mcp/
+/blob-report/
+/audit/
+/audits/
+*.trace
+
+# Temporary reports, patches and editor backups
+/*_REPORT.md
+/*_AUDIT.md
+/*_READINESS.md
+*.patch
+*.tmp
+*.bak
+*.orig
+*.rej
+
+# Local credentials and private keys
+/.credentials/
+/credentials*.json
+/tokens*.json
+*.pem
+*.key
