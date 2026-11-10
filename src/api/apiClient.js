@@ -10,7 +10,7 @@ export function createApiClient({ baseUrl, fetchImpl = (...args) => fetch(...arg
   let revision = 0;
   const invalidateReads = () => { revision += 1; pendingReads.clear(); };
   tokenStore.subscribe?.(invalidateReads);
-  async function send(path, { method = "GET", body, authenticated = true, signal } = {}) {
+  async function send(path, { method = "GET", body, authenticated = true, signal, responseType = "json" } = {}) {
     if (!baseUrl?.trim()) throw new ApiError("VITE_API_BASE_URL is not configured.", { code: "CONFIGURATION" });
     if (!path.startsWith("/api/")) throw new ApiError("Invalid API path.");
     const token = authenticated ? tokenStore.getToken() : null;
@@ -20,17 +20,25 @@ export function createApiClient({ baseUrl, fetchImpl = (...args) => fetch(...arg
     signal?.addEventListener("abort", abort, { once: true });
     if (signal?.aborted) controller.abort();
     const timer = setTimeout(abort, timeoutMs);
+    const multipart = typeof FormData !== "undefined" && body instanceof FormData;
     try {
       const response = await fetchImpl(baseUrl.trim().replace(/\/+$/, "") + path, {
         method, signal: controller.signal,
-        headers: { Accept: "application/json", ...(body !== undefined ? { "Content-Type": "application/json" } : {}), ...(token ? { Authorization: "Bearer " + token } : {}) },
-        ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+        headers: { Accept: responseType === "html" ? "text/html, application/json" : "application/json", ...(body !== undefined && !multipart ? { "Content-Type": "application/json" } : {}), ...(token ? { Authorization: "Bearer " + token } : {}) },
+        ...(body !== undefined ? { body: multipart ? body : JSON.stringify(body) } : {}),
       });
       if (authenticated && token !== tokenStore.getToken()) throw new ApiError("Session changed. Please retry.", { code: "SESSION_CHANGED" });
       if (response.status === 401 && authenticated) tokenStore.clear();
       const text = await response.text();
       // Reading the body is asynchronous too: a logout/login may happen here.
       if (authenticated && response.status !== 401 && token !== tokenStore.getToken()) throw new ApiError("Session changed. Please retry.", { code: "SESSION_CHANGED" });
+      // The existing receipt endpoint returns HTML, while errors still use JSON.
+      if (response.ok && responseType === "html") {
+        if (!response.headers?.get("content-type")?.toLowerCase().includes("text/html") || !text.trim()) {
+          throw new ApiError("The server returned an invalid receipt.", { status: response.status, code: "INVALID_RESPONSE" });
+        }
+        return text;
+      }
       let envelope;
       try { envelope = text ? JSON.parse(text) : {}; } catch { throw new ApiError("The server returned an invalid response.", { status: response.status, code: "INVALID_RESPONSE" }); }
       if (!envelope || typeof envelope !== "object" || Array.isArray(envelope)) throw new ApiError("The server returned an invalid response envelope.", { status: response.status, code: "INVALID_RESPONSE" });
@@ -47,7 +55,7 @@ export function createApiClient({ baseUrl, fetchImpl = (...args) => fetch(...arg
     // Share only overlapping reads. No persisted data cache or fallback to stale data.
     // Requests with caller-owned signals remain independent to preserve cancellation.
     if ((options.method || "GET") !== "GET" || options.signal || options.body !== undefined) return send(path, options);
-    const key = JSON.stringify([path, options.authenticated !== false, options.authenticated === false ? null : tokenStore.getToken(), revision]);
+    const key = JSON.stringify([path, options.responseType || "json", options.authenticated !== false, options.authenticated === false ? null : tokenStore.getToken(), revision]);
     if (pendingReads.has(key)) return pendingReads.get(key);
     const pending = send(path, options);
     pendingReads.set(key, pending);

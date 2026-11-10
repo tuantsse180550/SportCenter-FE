@@ -52,8 +52,8 @@ export function Field({ label, value, onChange, type = "text", placeholder, requ
   return <label className="field"><span>{label}</span><input required={required} type={type} value={value} placeholder={placeholder} onInvalid={invalid} onInput={(event) => event.currentTarget.setCustomValidity("")} onChange={(event) => onChange(event.target.value)} /></label>;
 }
 
-export function SelectField({ label, value, onChange, children }) {
-  return <label className="field"><span>{label}</span><select value={value} onChange={(event) => onChange(event.target.value)}>{children}</select></label>;
+export function SelectField({ label, value, onChange, children, disabled = false }) {
+  return <label className="field"><span>{label}</span><select disabled={disabled} value={value} onChange={(event) => onChange(event.target.value)}>{children}</select></label>;
 }
 
 export function PageHeader({ title, subtitle, action }) {

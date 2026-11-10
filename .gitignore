@@ -176,3 +176,10 @@ vite.config.ts.timestamp-*
 /tokens*.json
 *.pem
 *.key
+
+# Machine-specific files and local payment fixtures
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+/.payment-local-test/

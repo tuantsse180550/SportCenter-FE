@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button, Card, EmptyState } from "../common/UI.jsx";
 import { uiLabel } from "../../utils/vietnamese.js";
 import { formatters } from "../../utils/formatters.js";
+import { classTuition } from "../../utils/classTuition.js";
 const photos = {
  yoga: "/images/member/yoga.jpg",
  swimming: "/images/member/swimming.jpg",
@@ -17,9 +18,21 @@ export function StatusBadge({ status }) {
  const tone = ["CONFIRMED", "SUCCESS", "COMPLETED", "ACTIVE"].includes(status) ? "green" : ["PENDING_PAYMENT", "PENDING"].includes(status) ? "amber" : ["CANCELLED", "FAILED", "INACTIVE"].includes(status) ? "slate" : "blue";
  return <span className={"badge member-status " + tone}>{status === "SCHEDULED" ? "Đã lên lịch" : uiLabel(status)}</span>;
 }
-export function ClassCard({ item, registration, onRegister, pending, canRegister }) {
+export function MemberRegistrationNotice() {
+ return <p className="member-notice" role="status">Đăng ký lớp được xác nhận sau khi thanh toán thành công. Theo dõi giao dịch tại mục Thanh toán của tôi.</p>;
+}
+export function ClassCard({ item, registration, onRegister, pending, canRegister, registrationKnown = true }) {
  const navigate = useNavigate();
- return <article className="member-class-card"><SportImage sport={item.sport} /><div className="member-class-body"><span className="member-eyebrow">{item.sport || "Lớp thể thao"}</span><h2>{item.name}</h2><p>Huấn luyện viên: {item.coach?.name || "Chưa có thông tin"}</p><p className="member-class-schedule">{typeof item.schedule === "string" ? uiLabel(item.schedule).replace(/\b\d{4}-\d{2}-\d{2}\b/g, date => formatters.date(date)) : "Chưa có lịch học"}</p><p className="member-muted">{item.enrolledCount} thành viên đã xác nhận</p>{registration && <StatusBadge status={registration.status} />}<div className="member-card-actions"><Button variant="secondary" onClick={() => navigate("/member/classes/" + item.id)}>Xem chi tiết</Button>{!registration && <Button disabled={pending || !canRegister} onClick={() => onRegister(item)}>Đăng ký</Button>}</div></div></article>;
+ const tuition = classTuition(item);
+ return <article className="member-class-card"><SportImage sport={item.sport} /><div className="member-class-body">
+   <span className="member-eyebrow">{item.sport || "Lớp thể thao"}</span><h2>{item.name}</h2>
+   {item.course?.name && <p>Khóa học: {item.course.name}</p>}
+   <p>Học phí trọn khóa / học viên: {Number.isFinite(tuition) ? formatters.money(tuition) : "Chưa thiết lập"}</p>
+   <p>Huấn luyện viên: {item.coach?.name || "Chưa có thông tin"}</p>
+   <p className="member-class-schedule">{typeof item.schedule === "string" ? uiLabel(item.schedule).replace(/\b\d{4}-\d{2}-\d{2}\b/g, date => formatters.date(date)) : registrationKnown ? "Chưa có lịch học" : "Xem lịch học trong chi tiết lớp"}</p>
+   {Number.isFinite(item.enrolledCount) && <p className="member-muted">{item.enrolledCount} thành viên đã xác nhận</p>}{registration && <StatusBadge status={registration.status} />}
+   <div className="member-card-actions"><Button variant="secondary" onClick={() => navigate("/member/classes/" + item.id)}>Xem chi tiết</Button>{registrationKnown && !registration && <Button disabled={pending || !canRegister} onClick={() => onRegister(item)}>Đăng ký</Button>}</div>
+ </div></article>;
 }
 export function SessionCard({ session, preview = false, onOpen }) {
  return <article className={"member-session " + (preview ? "is-preview" : "")}><div className="member-session-time"><strong>{session.startTime}</strong><span>{session.endTime}</span></div><div><h3>{session.classItem?.name || "Buổi học"}</h3><p>Huấn luyện viên: {session.coach?.name || "Chưa có thông tin"}</p>{session.lesson?.title && <p>{session.lesson.title}</p>}<p>Phòng: {session.room ? session.room.roomNumber + " · " + session.room.name : "Chưa có thông tin"}</p>{preview && <small>Đăng ký chờ thanh toán • Chưa xác nhận chỗ học</small>}</div><div className="member-session-actions"><div><small>Trạng thái buổi học</small><StatusBadge status={session.status} /></div><Button variant="ghost" onClick={onOpen}>Xem chi tiết</Button></div></article>;

@@ -16,6 +16,10 @@ function checkWriteSession(session) {
   checkTime(session);
 }
 export const attendanceService = {
+  deleteRecord(id) {
+    if (!["CENTER_MANAGER", "RECEPTIONIST"].includes(authService.getCurrentUser()?.role)) throw new ApiError("Access denied", { status: 403 });
+    return attendanceApi.remove(id);
+  },
   async getMyAttendance() { return attendanceApi.my(); },
   async saveAttendance(session, statuses) {
     checkWriteSession(session);

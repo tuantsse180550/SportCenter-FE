@@ -1,13 +1,13 @@
 const contracts = {
   authService: ["getCurrentUser", "hasToken", "restore", "login", "loginWithGoogle", "logout", "registerMember"],
-  classService: ["listClasses", "getClassDetail", "getFormOptions", "createClass", "updateClass", "assignCoach", "registerMember"],
+  classService: ["listClasses", "getClassDetail", "listMemberClasses", "getMemberClassDetail", "getMemberClassSessions", "getFormOptions", "createClass", "updateClass", "assignCoach", "registerMember"],
   coachService: ["listCoaches"],
   memberService: ["listMembers", "getMemberDetail", "getMyProfile", "createMyProfile", "createMember", "updateProfile"],
   scheduleService: ["getCoachSessions", "getMemberSchedule", "getSessionDetail", "getCoachScheduleSummary"],
   attendanceService: ["saveAttendance"],
   trainingPlanService: ["listPlans", "getFormOptions", "createPlan"],
   trainingResultService: ["listForMember", "createResult"],
-  paymentService: ["listPayments", "listPendingRegistrations", "getRegistrationPayment", "recordPayment", "createPayment", "updatePayment", "simulatePayment"],
+  paymentService: ["listPayments", "listMyRegistrations", "listPendingRegistrations", "getRegistrationPayment", "getPaymentStatus", "getPaymentReceipt", "recordPayment", "createPayment", "createVnpayUrl", "verifyVnpayReturn", "updatePayment", "simulatePayment"],
   reportService: ["getDashboard", "getReports", "getAuditLog"],
   stateService: ["subscribe", "getSnapshot", "invalidate"],
 };

@@ -1,0 +1,9 @@
+.course-editor { display: grid; gap: 16px; }
+.course-form-fields { border: 0; padding: 0; margin: 0; min-width: 0; }
+.course-description { grid-column: 1 / -1; }
+.course-actions, .course-filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.course-actions { justify-content: flex-end; }
+.course-filters { margin-bottom: 20px; }
+.course-filters .field { flex: 1 1 180px; }
+.course-select-with-create { display: grid; gap: 8px; align-content: start; min-width: 0; }
+.course-select-with-create > .btn { justify-self: start; }

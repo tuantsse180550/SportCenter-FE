@@ -1,15 +1,17 @@
 import { useState } from "react";
-import { Button, Card, EmptyState, Field, SelectField, Modal, PageHeader, Badge } from "../../components/common/UI.jsx";
+import { Button, Field, SelectField, Modal, PageHeader } from "../../components/common/UI.jsx";
 import { AsyncPanel, ErrorMessage } from "../../components/common/AsyncPanel.jsx";
 import { useMutation, useQuery } from "../../store/useQuery.js";
-import { scheduleApi, roomApi, classApi, lessonApi, learningPathApi } from "../../services/api/resources.js";
+import { scheduleApi, roomApi, classApi, lessonApi } from "../../services/api/resources.js";
+import { idOf } from "../../services/api/normalize.js";
+import { ScheduleGroups } from "../../components/manager/ScheduleGroups.jsx";
+import { ConfirmDelete } from "../../components/common/ConfirmDelete.jsx";
+import { useApp } from "../../store/useApp.js";
 
 function ScheduleForm({ initial, options, onClose }) {
   const [form, setForm] = useState(initial || { classId: "", lessonId: "", roomId: "", date: "", startTime: "", endTime: "", status: "SCHEDULED" });
   const mutation = useMutation(); const set = key => value => setForm(old => ({ ...old, [key]: value, ...(key === "classId" ? { lessonId: "" } : {}) }));
-  const cls = options.classes.find(c => c.id === form.classId);
-  const paths = new Set(options.paths.filter(p => (typeof p.courseId === "object" ? p.courseId?._id || p.courseId?.id : p.courseId) === cls?.courseId).map(p => p.id));
-  const lessons = options.lessons.filter(l => paths.has(typeof l.learningPathId === "object" ? l.learningPathId?._id || l.learningPathId?.id : l.learningPathId));
+  const lessons = options.lessons.filter(l => idOf(l.classId) === form.classId);
   const submit = event => { event.preventDefault(); mutation.run(async () => {
     if (!form.classId || !form.lessonId || !form.roomId || !form.date || !form.startTime || !form.endTime || form.startTime >= form.endTime) throw new Error("Vui lòng chọn đủ thông tin và giờ kết thúc sau giờ bắt đầu.");
     return initial ? scheduleApi.update(initial.id, form) : scheduleApi.create(form);
@@ -18,6 +20,13 @@ function ScheduleForm({ initial, options, onClose }) {
 }
 export function ManagerSchedulesPage() {
   const [editing, setEditing] = useState(null);
-  const query = useQuery(async () => { const [sessions, rooms, classes, lessons, paths] = await Promise.all([scheduleApi.list(), roomApi.list(), classApi.list(), lessonApi.list(), learningPathApi.list()]); return { sessions, rooms, classes, lessons, paths }; });
-  return <><PageHeader title="Quản lý lịch học" action={<Button onClick={() => setEditing({})}>Thêm lịch học</Button>} /><AsyncPanel query={query}>{data => <><Card>{data.sessions.length ? <div className="stack-list">{data.sessions.map(s => <div key={s.id}><div><strong>{s.classItem?.name}</strong><p>{s.date} · {s.startTime}–{s.endTime} · {s.lesson?.title}</p><p>Phòng: {s.room ? s.room.roomNumber + " · " + s.room.name : "Chưa có thông tin"}</p><Badge>{s.status}</Badge></div><Button onClick={() => setEditing(s)}>Sửa lịch</Button></div>)}</div> : <EmptyState title="Chưa có lịch học" />}</Card>{editing && <ScheduleForm key={editing.id || "new"} initial={editing.id ? editing : null} options={data} onClose={() => setEditing(null)} />}</>}</AsyncPanel></>;
+  const [deleting, setDeleting] = useState(null);
+  const { toast } = useApp();
+  const query = useQuery(async () => { const [sessions, rooms, classes, lessons] = await Promise.all([scheduleApi.list(), roomApi.list(), classApi.list(), lessonApi.list()]); return { sessions, rooms, classes, lessons }; });
+  return <><PageHeader title="Quản lý lịch học" action={<Button onClick={() => setEditing({})}>Thêm lịch học</Button>} /><AsyncPanel query={query}>{data => <><ScheduleGroups sessions={data.sessions} classes={data.classes} onEdit={setEditing} onDelete={setDeleting} />{editing && <ScheduleForm key={editing.id || "new"} initial={editing.id ? editing : null} options={data} onClose={() => setEditing(null)} />}</>}</AsyncPanel>
+    {deleting && <ConfirmDelete title="Xóa lịch học" name={(deleting.classItem?.name || "Buổi học") + " · " + deleting.date + " " + deleting.startTime}
+      onClose={() => setDeleting(null)} onDelete={() => scheduleApi.remove(deleting.id)} onDeleted={() => { setDeleting(null); toast("Đã xóa lịch học"); }}>
+      <p>Không thể xóa lịch của buổi đã có điểm danh. Nội dung bài học của lớp được giữ lại.</p>
+    </ConfirmDelete>}
+  </>;
 }

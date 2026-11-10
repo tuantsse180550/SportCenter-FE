@@ -1,5 +1,6 @@
-import { paymentApi, registrationApi, courseApi } from "./resources.js";
+import { paymentApi, registrationApi } from "./resources.js";
 import { ApiError } from "../../api/apiClient.js";
+import { createPaymentReceiptReader, createPaymentStatusReader, validatePaymentStatus } from "./paymentStatus.js";
 function mutablePayment(input) {
   if (input.amount !== undefined) throw new ApiError("Số tiền do hệ thống xác định theo học phí; không thể thay đổi.", { status: 400, code: "IMMUTABLE_PAYMENT_AMOUNT" });
   if (input.status !== undefined || input.paymentDate !== undefined) {
@@ -8,21 +9,29 @@ function mutablePayment(input) {
   return input;
 }
 export const paymentService = {
+  getPaymentStatus: createPaymentStatusReader((id, options) => paymentApi.status(id, options)),
+  getPaymentReceipt: createPaymentReceiptReader((id, options) => paymentApi.receipt(id, options)),
   listPayments: () => paymentApi.list(),
+  async listMyRegistrations() { return registrationApi.list(); },
+  async verifyVnpayReturn(query, options) {
+    const data = await paymentApi.verifyReturn(query, options);
+    return validatePaymentStatus(query.vnp_TxnRef, data);
+  },
   async listPendingRegistrations() { return (await registrationApi.list()).filter((r) => r.status === "PENDING_PAYMENT"); },
   async getRegistrationPayment(id) {
-    const [registrations, payments, courses] = await Promise.all([registrationApi.list(), paymentApi.list(), courseApi.list()]);
+    const [registrations, payments] = await Promise.all([registrationApi.list(), paymentApi.list()]);
     const registration = registrations.find((r) => r.id === id) || null;
-    return { registration, coursePrice: courses.find(c => c.id === registration?.classItem?.courseId)?.price, payments: payments.filter((p) => p.classRegistrationId === id) };
+    const price = registration?.priceSnapshot;
+    return { registration, coursePrice: Number.isFinite(price) && price >= 0 ? price : undefined, payments: payments.filter((p) => p.classRegistrationId === id) };
   },
   async recordPayment({ classRegistrationId, paymentMethod, confirmReceived = false }) {
     if (confirmReceived) throw new ApiError("Payment confirmation by reception is not supported by the current backend.", { code: "UNSUPPORTED_PAYMENT_CONFIRMATION" });
     const current = await this.getRegistrationPayment(classRegistrationId);
     if (current.registration?.status !== "PENDING_PAYMENT") throw new ApiError("This registration is no longer pending payment. Refresh to see its current status.");
     const existing = current.payments.find((p) => p.status === "PENDING");
-    if (existing && !confirmReceived) throw new ApiError("A payment is already pending. Please contact reception to confirm receipt.");
+    if (existing && existing.paymentMethod !== paymentMethod) throw new ApiError("Đã có giao dịch chờ với phương thức khác. Vui lòng kiểm tra giao dịch hiện tại.");
     const payload = { classRegistrationId, paymentMethod };
-    const payment = existing ? await paymentApi.update(existing.id, payload) : await paymentApi.create(payload);
+    const payment = existing || await paymentApi.create(payload);
     // Never derive CONFIRMED locally. The database response is authoritative.
     try { const refreshed = await this.getRegistrationPayment(classRegistrationId); return { payment, registration: refreshed.registration }; }
     catch (error) { return { payment, registration: null, refreshError: "Payment was recorded, but registration refresh failed: " + error.message }; }
