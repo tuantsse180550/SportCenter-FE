@@ -4,7 +4,7 @@ import { Icon } from "../components/common/UI.jsx";
 import { authService } from "../services/index.js";
 import { useApp } from "../store/useApp.js";
 import "./member.css";
-const links = [["Lịch sử điểm danh", "/member/attendance", "clipboard"], ["Trang chủ", "/member/home", "grid"], ["Khám phá lớp học", "/member/classes", "activity"], ["Lịch học của tôi", "/member/schedule", "calendar"], ["Lớp đã đăng ký", "/member/home#registrations", "clipboard"], ["Kết quả tập luyện", "/member/results", "chart"], ["Tài khoản", "/member/account", "user"]];
+const links = [["Trang chủ", "/member/home", "grid"], ["Lịch sử điểm danh", "/member/attendance", "clipboard"], ["Khám phá lớp học", "/member/classes", "activity"], ["Lịch học của tôi", "/member/schedule", "calendar"], ["Thanh toán của tôi", "/member/payments", "card"], ["Lớp đã đăng ký", "/member/home#registrations", "clipboard"], ["Kết quả tập luyện", "/member/results", "chart"], ["Tài khoản", "/member/account", "user"]];
 export function MemberLayout() {
   const [open, setOpen] = useState(false); const { user, setUser } = useApp(); const location = useLocation();
   const menu = useRef(null); const sidebar = useRef(null); const main = useRef(null);

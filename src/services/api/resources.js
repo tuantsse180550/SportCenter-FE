@@ -23,17 +23,51 @@ export const memberProfileApi = {
   async create(input) { return record(await apiClient("/api/members/me", { method: "POST", body: normalize.pick(input, ["fullName", "phone", "goal", "level"]) }), normalize.person, "members/me"); },
   async update(input) { return record(await apiClient("/api/members/me", { method: "PUT", body: normalize.pick(input, ["fullName", "phone", "goal", "level"]) }), normalize.person, "members/me"); },
 };
-export const coachApi = resource("coaches", normalize.person, ["userId", "fullName", "phone"], { remove: true, updateFields: ["fullName", "phone"] });
+export const coachApi = {
+  ...resource("coaches", normalize.coach, ["userId", "fullName", "phone", "subjectIds"], { remove: true, updateFields: ["fullName", "phone", "subjectIds"] }),
+  async myStudents() {
+    const rows = await apiClient("/api/coaches/my-students");
+    if (!Array.isArray(rows)) throw new ApiError("Invalid coach students response", { code: "INVALID_RESPONSE" });
+    // This endpoint returns confirmed registrations for the authenticated coach's classes only.
+    return rows.map(row => {
+      const member = record(row?.member, normalize.person, "coaches/my-students");
+      const classId = normalize.idOf(row?.class);
+      if (!classId) throw new ApiError("Invalid coach student class response", { code: "INVALID_RESPONSE" });
+      return { classId, memberId: member.id, member, status: "CONFIRMED", registeredAt: row.registeredAt };
+    });
+  },
+  async createAccount(input) {
+    const data = await apiClient("/api/coaches/accounts", { method: "POST", body: normalize.pick(input, ["email", "password", "fullName", "phone", "subjectIds"]) });
+    if (!data?.user?.id || data.user.role !== "COACH" || normalize.idOf(data.coach?.userId) !== data.user.id) {
+      throw new ApiError("Tài khoản có thể đã được tạo nhưng phản hồi không hợp lệ. Vui lòng kiểm tra danh sách HLV trước khi thử lại.", { code: "INVALID_RESPONSE" });
+    }
+    return { user: data.user, coach: record(data.coach, normalize.coach, "coaches/accounts") };
+  },
+};
 export const subjectApi = resource("subjects", normalize.entity, ["name"], { remove: true });
-export const courseApi = resource("courses", normalize.entity, ["name", "description", "price", "status"], { remove: true });
+export const courseApi = resource("courses", normalize.course, ["subjectId", "name", "description", "price", "status"], { remove: true });
 export const roomApi = {
   ...resource("rooms", normalize.entity, ["roomNumber", "name", "capacity", "status"], { remove: true }),
   async get(id) { return record(await apiClient("/api/rooms/" + encodeURIComponent(id)), normalize.entity, "rooms"); },
 };
-export const learningPathApi = resource("learning-paths", normalize.entity, ["courseId", "name", "description"], { remove: true });
+export const learningPathApi = {
+  ...resource("learning-paths", normalize.entity, ["courseId", "name", "description"], { remove: true }),
+  async apply(id, classId, expectedLessons) {
+    const rows = await apiClient("/api/learning-paths/" + encodeURIComponent(id) + "/apply", { method: "POST", body: { classId, expectedLessons } });
+    if (!Array.isArray(rows)) throw new ApiError("Invalid class curriculum response", { code: "INVALID_RESPONSE" });
+    return rows.map(row => record(row, normalize.entity, "learning-paths/apply"));
+  },
+};
 export const classApi = resource("classes", normalize.classItem, ["name", "subjectId", "courseId", "coachId"], { remove: true });
 export const registrationApi = resource("class-registrations", normalize.registration, ["classId", "memberId", "status"], { createFields: ["classId", "memberId"] });
 export const scheduleApi = {
+  generateClass(input) { return apiClient("/api/schedules/generate", { method: "POST", body: input }); },
+  async importExcel(file) {
+    if (!file || !/\.xlsx$/i.test(file.name) || file.size > 5 * 1024 * 1024 || file.size === 0) throw new ApiError("Chọn file .xlsx không rỗng, tối đa 5 MB.", { status: 400 });
+    const body = new FormData();
+    body.append("file", file);
+    return apiClient("/api/schedules/import", { method: "POST", body });
+  },
   async coachMy() {
     const rows = await apiClient("/api/schedules/coach/my");
     if (!Array.isArray(rows)) throw new ApiError("Invalid coach schedule response", { code: "INVALID_RESPONSE" });
@@ -65,12 +99,27 @@ export const attendanceApi = {
 export const workoutPlanApi = resource("workout-plans", normalize.workoutPlan, ["coachId", "memberId", "classId", "goal", "level", "plan", "source", "status"], { remove: true });
 export const workoutResultApi = resource("workout-results", normalize.workoutResult, ["workoutPlanId", "memberId", "result", "comment"], { updateFields: ["result", "comment"] });
 export const paymentApi = {
+  verifyReturn(query, { signal } = {}) { return apiClient("/api/payments/vnpay/verify-return", { method: "POST", body: query, signal }); },
+  status(id, { signal } = {}) { return apiClient("/api/payments/" + encodeURIComponent(id) + "/status", { signal }); },
   ...resource("payments", normalize.payment, ["classRegistrationId", "paymentMethod"]),
+  receipt(id, { signal } = {}) { return apiClient("/api/payments/" + encodeURIComponent(id) + "/receipt", { signal, responseType: "html" }); },
   simulate(id, status) { return apiClient("/api/payments/" + encodeURIComponent(id) + "/simulate", { method: "POST", body: { status } }); },
   vnpay(id) { return apiClient("/api/payments/" + encodeURIComponent(id) + "/vnpay", { method: "POST" }); },
 };
 export const activityLogApi = resource("activity-logs", normalize.entity, ["userId", "action"], { update: false });
 export const notificationApi = resource("notifications", normalize.entity, ["userId", "title", "message", "isRead"], { createFields: ["userId", "title", "message"], updateFields: ["isRead"] });
 export const supportRequestApi = resource("support-requests", normalize.entity, ["memberId", "message", "status"], { createFields: ["memberId", "message"], updateFields: ["status"] });
-export const lessonApi = resource("lessons", normalize.entity, ["learningPathId", "title", "description", "order"], { remove: true });
+export const lessonApi = {
+  ...resource("lessons", normalize.entity, ["classId", "learningPathId", "title", "description", "order"], { remove: true }),
+  async templates() {
+    const rows = await apiClient("/api/lessons?templates=true");
+    if (!Array.isArray(rows)) throw new ApiError("Invalid template lessons response", { code: "INVALID_RESPONSE" });
+    return rows.map(row => record(row, normalize.entity, "lessons/templates"));
+  },
+  async forClass(id) {
+    const rows = await apiClient("/api/lessons/class/" + encodeURIComponent(id));
+    if (!Array.isArray(rows)) throw new ApiError("Invalid class lessons response", { code: "INVALID_RESPONSE" });
+    return rows.map(row => record(row, normalize.entity, "lessons/class"));
+  },
+};
 export const lessonProgressApi = resource("lesson-progress", normalize.entity, ["memberId", "lessonId", "classId", "status"], { updateFields: ["status", "coachComment"] });

@@ -1,0 +1,6 @@
+.subject-editor { display: grid; gap: 16px; }
+.subject-form-fields { border: 0; padding: 0; margin: 0; min-width: 0; }
+.subject-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 12px; }
+.subject-search { max-width: 480px; margin-bottom: 20px; }
+.subject-table { overflow-x: auto; }
+.subject-inline-heading { margin-bottom: 16px; }

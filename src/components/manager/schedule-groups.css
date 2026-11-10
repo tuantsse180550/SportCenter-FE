@@ -1,0 +1,16 @@
+.manager-schedule-groups { margin-top: 24px; }
+.manager-schedule-filters { display: flex; gap: 16px; align-items: end; flex-wrap: wrap; }
+.manager-schedule-filters .field { flex: 1; min-width: 220px; }
+.manager-schedule-subject { margin-top: 28px; }
+.manager-schedule-subject > h2 { margin-bottom: 16px; }
+.manager-schedule-subject > h2 span { font-size: 14px; font-weight: 400; color: #64748b; }
+.manager-schedule-course { margin-bottom: 16px; }
+.manager-schedule-course-heading { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; border-bottom: 1px solid #e4e8ee; padding-bottom: 12px; }
+.manager-schedule-course-heading h3 { margin: 0; }
+.manager-schedule-course-heading > span { color: #64748b; }
+.manager-schedule-description { white-space: pre-wrap; }
+@media (max-width: 600px) {
+  .manager-schedule-filters { align-items: stretch; }
+  .manager-schedule-filters > * { width: 100%; }
+  .manager-schedule-course .stack-list > div { align-items: flex-start; flex-direction: column; gap: 12px; }
+}

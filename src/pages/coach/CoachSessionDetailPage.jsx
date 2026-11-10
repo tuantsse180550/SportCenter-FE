@@ -33,8 +33,22 @@ function SessionContent({ session, user, toast, reload }) {
     <p role="status" aria-live="polite">{timeWindow.message}</p><ErrorMessage error={mutation.error} />
     {session.attendanceAmbiguous && <Card><p role="alert">Nhiều buổi học dùng chung lớp, bài học và ngày điểm danh. Hiện chưa thể xác định kết quả thuộc buổi nào. Vui lòng liên hệ quản lý; thao tác điểm danh được tạm khóa.</p></Card>}
     <Card><div className="card-title"><strong>Điểm danh</strong><Button disabled={mutation.pending || !timeWindow.allowed || session.attendanceAmbiguous || !Object.keys(changes).length} onClick={save}>{mutation.pending ? "Đang lưu..." : "Lưu điểm danh"}</Button></div>
-      <p>Chọn trạng thái cho thành viên cần ghi nhận hoặc cập nhật. Các dòng chưa chọn sẽ không được đánh dấu vắng mặt.</p>
-      {session.members.length ? <div className="attendance-list">{session.members.map(m => <div key={m.id} className="coach-attendance-row"><AvatarText name={m.name} sub={m.phone} /><div className="attendance-control"><select aria-label={"Điểm danh " + m.name} disabled={mutation.pending || !timeWindow.allowed || session.attendanceAmbiguous} value={selected(m.id)} onChange={e => setAttendance({ ...attendance, [m.id]: e.target.value })}><option value="">Chọn trạng thái điểm danh</option><option value="PRESENT">{uiLabel("PRESENT")}</option><option value="ABSENT">{uiLabel("ABSENT")}</option></select><small>{session.attendanceAmbiguous ? "Kết quả chưa thể gắn với một buổi học duy nhất" : savedRecord(m.id) ? "Đã lưu: " + uiLabel(savedRecord(m.id).status) : "Chưa có kết quả điểm danh"}</small></div><Button variant="ghost" onClick={() => setResultMember(m)}>Ghi nhận kết quả</Button></div>)}</div> : <EmptyState title="Chưa có thành viên được xác nhận" text="Đăng ký chờ thanh toán chưa được đưa vào danh sách điểm danh." />}
+      <p>Tích Có mặt hoặc Vắng mặt cho từng thành viên, sau đó bấm Lưu điểm danh. Các dòng chưa chọn sẽ không được đánh dấu vắng mặt.</p>
+      {session.members.length ? <div className="attendance-list">{session.members.map(m => <div key={m.id} className="coach-attendance-row">
+        <AvatarText name={m.name} sub={m.phone} />
+        <div className="attendance-control">
+          <div className="attendance-options" role="radiogroup" aria-label={"Điểm danh " + m.name}>
+            {["PRESENT", "ABSENT"].map(status => <label key={status} className={"attendance-option " + status.toLowerCase() + (selected(m.id) === status ? " is-selected" : "")}>
+              <input type="radio" name={"attendance-" + session.id + "-" + m.id} value={status}
+                checked={selected(m.id) === status} disabled={mutation.pending || !timeWindow.allowed || session.attendanceAmbiguous}
+                onChange={() => setAttendance(old => ({ ...old, [m.id]: status }))} />
+              <span>{uiLabel(status)}</span>
+            </label>)}
+          </div>
+          <small>{session.attendanceAmbiguous ? "Kết quả chưa thể gắn với một buổi học duy nhất" : savedRecord(m.id) ? "Đã lưu: " + uiLabel(savedRecord(m.id).status) : "Chưa có kết quả điểm danh"}</small>
+        </div>
+        <Button variant="ghost" onClick={() => setResultMember(m)}>Ghi nhận kết quả</Button>
+      </div>)}</div> : <EmptyState title="Chưa có thành viên được xác nhận" text="Đăng ký chờ thanh toán chưa được đưa vào danh sách điểm danh." />}
     </Card>
     <Card className="mt"><div className="card-title"><strong>Kết quả điểm danh đã ghi nhận</strong><Button variant="secondary" disabled={mutation.pending} onClick={reload}>Làm mới điểm danh</Button></div>
       {session.attendanceAmbiguous ? <p>Chưa thể phân biệt bản ghi giữa các buổi học trùng thông tin.</p> : session.attendance.length ? <div style={{ overflowX: "auto" }}><table><thead><tr><th>Thành viên</th><th>Kết quả đã lưu</th><th>Cập nhật gần nhất</th><th>Thao tác</th></tr></thead><tbody>{session.attendance.map(record => <tr key={record.id}><td>{record.member?.name || session.members.find(m => m.id === record.memberId)?.name || "Chưa có thông tin thành viên"}</td><td><Badge tone={record.status === "PRESENT" ? "green" : "rose"}>{record.status}</Badge></td><td>{formatters.dateTime(record.updatedAt || record.createdAt)}</td><td><Button variant="ghost" disabled={mutation.pending || !timeWindow.allowed} onClick={() => remove(record)}>Xóa điểm danh</Button></td></tr>)}</tbody></table></div> : <EmptyState title="Chưa có kết quả điểm danh" text="Chỉ các trạng thái đã lưu thành công mới xuất hiện tại đây." />}

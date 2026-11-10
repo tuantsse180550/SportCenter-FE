@@ -664,6 +664,21 @@ textarea {
   padding: 18px 12px;
 }
 
+.delete-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 12px; margin-top: 16px; }
+.delete-confirmation { margin-top: 16px; border: 1px solid #fecaca; }
+
+.sidebar nav,
+.mobile-nav,
+.member-sidebar {
+  scrollbar-width: none;
+}
+
+.sidebar nav::-webkit-scrollbar,
+.mobile-nav::-webkit-scrollbar,
+.member-sidebar::-webkit-scrollbar {
+  display: none;
+}
+
 .sidebar nav button,
 .sidebar-bottom button {
   align-items: center;
