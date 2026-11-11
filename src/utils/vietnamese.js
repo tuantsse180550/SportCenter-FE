@@ -175,7 +175,45 @@ const errorMessages = {
   "Only pending payments can be simulated": "Chỉ có thể mô phỏng thanh toán đang chờ xử lý.",
   "Mock payment mode is disabled": "Chế độ mô phỏng thanh toán chưa được bật.",
   "You cannot access this payment": "Bạn không có quyền truy cập thanh toán này.",
+  "You cannot access this receipt": "Bạn không có quyền truy cập biên nhận này.",
+  "You cannot update another member's payment": "Bạn không thể cập nhật thanh toán của thành viên khác.",
+  "Only Web ONLINE payments can be simulated": "Chỉ có thể mô phỏng giao dịch thanh toán trực tuyến trên web.",
   "Simulation status must be SUCCESS or FAILED.": "Kết quả mô phỏng phải là Thành công hoặc Thất bại.",
+  "This cancelled registration has payment history. Please contact staff to register again.": "Đăng ký đã hủy này đã có lịch sử giao dịch thanh toán. Vui lòng liên hệ nhân viên trung tâm để được đăng ký lại.",
+  "VNPay requires a whole VND amount of at least 5000 VND": "VNPay yêu cầu số tiền thanh toán là số nguyên từ 5.000 ₫ trở lên.",
+  "Payment link expired. Refresh and create a new payment.": "Liên kết thanh toán đã hết hạn. Vui lòng làm mới và tạo giao dịch mới.",
+  "Payment status changed. Please refresh.": "Trạng thái thanh toán vừa thay đổi. Vui lòng làm mới trang.",
+  "Only pending payments can be paid": "Chỉ có thể thanh toán cho giao dịch đang chờ xử lý.",
+  "Only ONLINE payments can use VNPay": "Chỉ giao dịch trực tuyến mới có thể thanh toán qua VNPay.",
+  "VNPay is disabled in the current payment mode": "VNPay đang bị tắt trong chế độ thanh toán hiện tại.",
+  "Could not create VNPay payment URL": "Không thể tạo liên kết thanh toán VNPay. Vui lòng thử lại.",
+  "Could not create payment": "Không thể tạo giao dịch thanh toán. Vui lòng thử lại.",
+  "Registration is not awaiting payment": "Đăng ký này không còn ở trạng thái chờ thanh toán.",
+  "Registration already has a successful payment": "Đăng ký này đã được thanh toán thành công.",
+  "A payment with another method is already pending": "Đã có giao dịch chờ xử lý bằng phương thức thanh toán khác.",
+  "A payment with another provider is already pending": "Đã có giao dịch chờ xử lý qua cổng thanh toán khác.",
+  "Registration priceSnapshot must be a positive whole VND amount": "Học phí của đăng ký phải là số nguyên dương theo VNĐ.",
+  "Cannot change the method of an online payment": "Không thể đổi phương thức của giao dịch thanh toán trực tuyến.",
+  "A receipt is available only for successful payments": "Biên nhận chỉ khả dụng cho giao dịch đã thanh toán thành công.",
+  "Course tuition has not been configured": "Khóa học chưa được cấu hình học phí.",
+  "You can only register yourself": "Bạn chỉ có thể đăng ký lớp cho chính mình.",
+  "You cannot update another member's registration": "Bạn không thể cập nhật đăng ký của thành viên khác.",
+  "Members cannot confirm registrations directly. Confirmation must be performed by the payment flow.": "Thành viên không thể tự xác nhận đăng ký; hệ thống chỉ xác nhận sau khi thanh toán thành công.",
+  "Members can only cancel their own registration": "Thành viên chỉ có thể hủy đăng ký của chính mình.",
+  "Members cannot change the class or member of a registration": "Thành viên không thể tự đổi lớp học hoặc người đăng ký.",
+  "message must not exceed 2000 characters": "Nội dung yêu cầu không được vượt quá 2000 ký tự.",
+  "Your role cannot view these homeworks.": "Vai trò của bạn không có quyền xem các bài tập này.",
+  "Challenge token and OTP are required": "Cần cung cấp mã phiên xác thực và mã OTP.",
+  "OTP must contain 6 digits": "Mã OTP phải gồm đúng 6 chữ số.",
+  "Challenge token is invalid or expired": "Phiên xác thực OTP không hợp lệ hoặc đã hết hạn.",
+  "Invalid OTP verification challenge": "Phiên xác thực OTP không hợp lệ.",
+  "Google account not found": "Không tìm thấy tài khoản Google tương ứng.",
+  "OTP is invalid or expired": "Mã OTP không hợp lệ hoặc đã hết hạn.",
+  "OTP is incorrect": "Mã OTP không chính xác.",
+  "Too many incorrect attempts. Request a new OTP": "Bạn đã nhập sai OTP quá nhiều lần. Vui lòng yêu cầu mã OTP mới.",
+  "Please wait before requesting another OTP": "Vui lòng chờ trước khi yêu cầu lại mã OTP.",
+  "Unable to complete Google login": "Không thể hoàn tất đăng nhập Google. Vui lòng thử lại.",
+  "Unable to verify OTP": "Không thể xác minh mã OTP. Vui lòng thử lại.",
   "order must be greater than or equal to 1": "Thứ tự phải lớn hơn hoặc bằng 1.",
   "isRead must be a boolean": "Trạng thái đã đọc phải là Có hoặc Không.",
   "invalid": "Giá trị không hợp lệ.",
@@ -187,7 +225,6 @@ export function errorText(message, context = {}) {
     if (Object.hasOwn(errorMessages, text)) return errorMessages[text];
     const partial = text.match(/^(\d+) attendance records saved before the error\. Retry to update remaining records\. (.*)$/s);
     if (partial) return `Đã lưu ${partial[1]} lượt điểm danh trước khi xảy ra lỗi. Vui lòng thử lại để cập nhật các lượt còn lại. ${errorText(partial[2], context)}`;
-    if (/^ATTENDANCE_(NOT_STARTED|ENDED|CANCELLED|INVALID_TIME)$/.test(context.code || "")) return message;
     if (/^ATTENDANCE_(NOT_STARTED|ENDED|CANCELLED|INVALID_TIME)$/.test(context.code || "")) return message;
     const refresh = text.match(/^Payment was recorded, but registration refresh failed: (.*)$/s);
     if (refresh) return `Đã ghi nhận thanh toán nhưng chưa làm mới được đăng ký. ${errorText(refresh[1], context)}`;
@@ -204,6 +241,7 @@ export function errorText(message, context = {}) {
       if (labels.every(s => !/[A-Z_]{3,}/.test(s))) return `${fieldLabels[choices[1]] || "Thông tin"} phải là ${labels.join(", ")}.`;
     }
     if (/^Invalid (record|list) response for /.test(text)) return "Dữ liệu do hệ thống trả về không hợp lệ. Vui lòng thử lại.";
+    if ((!context.status || context.status < 500) && /[ĂăĐđĨĩŨũƠơƯưẠ-ỹÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚÝàáâãèéêìíòóôõùúý]/.test(text)) return text;
   }
   if (context.code === "NETWORK") return "Không thể kết nối với hệ thống. Vui lòng kiểm tra kết nối và thử lại.";
   if (context.code === "ABORTED") return "Yêu cầu hết thời gian chờ hoặc đã bị hủy. Vui lòng thử lại.";

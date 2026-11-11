@@ -28,8 +28,14 @@ export const memberService = {
   // Backend requires a pre-existing MEMBER User; no implicit account/payment creation.
   createMember: (input) => memberApi.create(input),
   createMyProfile: (input) => memberProfileApi.create(input),
-  updateProfile(id, input) {
+  async updateProfile(id, input) {
     const current = authService.getCurrentUser();
-    return current?.role === "MEMBER" && current.memberId === id ? memberProfileApi.update(input) : memberApi.update(id, input);
+    if (current?.role === "MEMBER") {
+      if (current.memberId && current.memberId !== id) {
+        throw new ApiError("You cannot access another member's profile.", { status: 403 });
+      }
+      return memberProfileApi.update(input);
+    }
+    return memberApi.update(id, input);
   },
 };

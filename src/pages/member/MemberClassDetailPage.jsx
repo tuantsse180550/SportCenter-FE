@@ -9,8 +9,9 @@ import { useApp } from "../../store/useApp.js";
 import { useMutation, useQuery } from "../../store/useQuery.js";
 import { formatters } from "../../utils/formatters.js";
 
-export function MemberClassRegistrationPanel({ classId, memberId, confirmation, registration, coursePrice, registrationOpen = true, pending, onRegister, onProfile, onSchedule, onPay }) {
+export function MemberClassRegistrationPanel({ classId, memberId, confirmation, registration, coursePrice, registrationOpen = true, hasPaymentHistory = false, pending, onRegister, onProfile, onSchedule, onPay }) {
   const hasCoursePrice = Number.isFinite(coursePrice) && coursePrice >= 0;
+  const canPayTuition = hasCoursePrice && coursePrice > 0;
   const confirmedSession = memberId && !confirmation.loading && !confirmation.error &&
     confirmation.data?.find(session => session.classId === classId && session.registrationStatus === "CONFIRMED");
   const confirmedStatus = confirmedSession?.registrationStatus || (registration?.status === "CONFIRMED" ? registration.status : null);
@@ -24,7 +25,12 @@ export function MemberClassRegistrationPanel({ classId, memberId, confirmation, 
     <h2>Thông tin đăng ký</h2>
     <div role="status"><p>Bạn đã đăng ký lớp này.</p>{registration.status && <StatusBadge status={registration.status} />}</div>
     {registration.status === "PENDING_PAYMENT" && <><p>Thanh toán học phí để xác nhận đăng ký.</p><Button onClick={onPay}>Thanh toán qua VNPay Sandbox</Button></>}
-    {registration.status === "CANCELLED" && <><p>Đăng ký đã hủy. Bạn có thể gửi yêu cầu đăng ký lại nếu đủ điều kiện.</p>{!hasCoursePrice && <p>Vui lòng chờ trung tâm cập nhật học phí trước khi đăng ký lại.</p>}<Button disabled={pending || !hasCoursePrice || !registrationOpen} onClick={onRegister}>Đăng ký lại</Button></>}
+    {registration.status === "CANCELLED" && <>
+      <p>Đăng ký đã hủy.{hasPaymentHistory ? " Đăng ký này đã có lịch sử giao dịch thanh toán nên chưa thể tự đăng ký lại trực tuyến. Vui lòng liên hệ nhân viên trung tâm để được đăng ký lại." : " Bạn có thể gửi yêu cầu đăng ký lại nếu đủ điều kiện."}</p>
+      {!hasPaymentHistory && (!hasCoursePrice ? <p>Vui lòng chờ trung tâm cập nhật học phí trước khi đăng ký lại.</p> : !canPayTuition ? <p role="status">Khóa học có học phí 0 ₫ chưa hỗ trợ tạo giao dịch thanh toán tự động. Vui lòng liên hệ trung tâm để được đăng ký.</p> : coursePrice < 5000 && <p role="status">Lưu ý: VNPay Sandbox trên web yêu cầu số tiền từ 5.000 ₫ trở lên.</p>)}
+      {!hasPaymentHistory && !registrationOpen && <p role="status">Khóa học hiện ngừng nhận đăng ký mới.</p>}
+      <Button disabled={pending || !canPayTuition || !registrationOpen || hasPaymentHistory} onClick={onRegister}>Đăng ký lại</Button>
+    </>}
   </>;
   if (memberId && confirmation.loading) return <><h2>Thông tin đăng ký</h2><p role="status">Đang kiểm tra đăng ký của bạn...</p></>;
   if (memberId && confirmation.error) return <>
@@ -36,9 +42,9 @@ export function MemberClassRegistrationPanel({ classId, memberId, confirmation, 
     <p className="member-notice">{hasCoursePrice ? "Học phí trọn khóa / học viên: " + formatters.money(coursePrice) : "Chưa có học phí từ hệ thống. Vui lòng liên hệ trung tâm."}</p>
     {!memberId ? <><p>Hoàn thiện hồ sơ cá nhân để đăng ký lớp học.</p><Button onClick={onProfile}>Hoàn thiện hồ sơ</Button></> : <>
       <MemberRegistrationNotice />
-      <p>{hasCoursePrice ? "Sau khi đăng ký, bạn có thể thanh toán học phí qua VNPay Sandbox." : "Vui lòng chờ trung tâm cập nhật học phí trước khi đăng ký."}</p>
+      <p>{canPayTuition ? (coursePrice < 5000 ? "Lưu ý: Học phí dưới 5.000 ₫ chưa hỗ trợ VNPay Sandbox trên web; sau khi đăng ký bạn cần liên hệ trung tâm để hoàn tất thanh toán." : "Sau khi đăng ký, bạn có thể thanh toán học phí qua VNPay Sandbox.") : !hasCoursePrice ? "Vui lòng chờ trung tâm cập nhật học phí trước khi đăng ký." : "Khóa học có học phí 0 ₫ chưa hỗ trợ tạo giao dịch thanh toán tự động. Vui lòng liên hệ trung tâm để được đăng ký."}</p>
       {!registrationOpen && <p role="status">Khóa học hiện ngừng nhận đăng ký mới.</p>}
-      <Button disabled={pending || !hasCoursePrice || !registrationOpen} onClick={onRegister}>{pending ? "Đang gửi..." : "Yêu cầu đăng ký"}</Button>
+      <Button disabled={pending || !canPayTuition || !registrationOpen} onClick={onRegister}>{pending ? "Đang gửi..." : "Yêu cầu đăng ký"}</Button>
     </>}
   </>;
 }
@@ -52,11 +58,13 @@ export function MemberClassDetailPage() {
   const [paying, setPaying] = useState(null);
   const query = useQuery(() => classService.getMemberClassDetail(classId), [classId]);
   const sessions = useQuery(() => classService.getMemberClassSessions(classId), [classId]);
-  const confirmation = useQuery(() => user.memberId ? paymentService.listMyRegistrations() : Promise.resolve([]), [user.id, user.memberId, classId]);
-  const registration = confirmation.data?.find(row => row.classId === classId) || (submitted && submitted.classId === classId && submitted.userId === user.id ? submitted.registration : null);
+  const confirmation = useQuery(() => user?.memberId ? paymentService.listMyRegistrations() : Promise.resolve([]), [user?.id, user?.memberId, classId]);
+  const paymentsQuery = useQuery(() => user?.memberId ? paymentService.listPayments().catch(() => []) : Promise.resolve([]), [user?.id, user?.memberId, classId]);
+  const registration = confirmation.data?.find(row => row.classId === classId) || (submitted && submitted.classId === classId && submitted.userId === user?.id ? submitted.registration : null);
+  const hasPaymentHistory = Boolean(registration?.status === "CANCELLED" && paymentsQuery.data?.some(p => p.classRegistrationId === registration.id));
   const isConfirmed = registration?.status === "CONFIRMED";
   const register = () => {
-    if (!user.memberId || query.loading || query.error || query.data?.registrationOpen === false || !Number.isFinite(query.data?.coursePrice) || query.data.coursePrice < 0 || confirmation.loading || confirmation.error || isConfirmed || (registration && registration.status !== "CANCELLED") || mutation.pending) return;
+    if (!user?.memberId || query.loading || query.error || query.data?.registrationOpen === false || !Number.isFinite(query.data?.coursePrice) || !(query.data.coursePrice > 0) || confirmation.loading || confirmation.error || isConfirmed || hasPaymentHistory || (registration && registration.status !== "CANCELLED") || mutation.pending) return;
     if (!window.confirm(`Đăng ký khóa học: ${query.data.course?.name || query.data.name}\nLớp: ${query.data.name}\nHọc phí mỗi học viên: ${formatters.money(query.data.coursePrice)}\nCần thanh toán để xác nhận chỗ học.`)) return;
     mutation.run(async () => {
       try { return await classService.registerMember(classId, user.memberId); }
@@ -68,7 +76,8 @@ export function MemberClassDetailPage() {
         throw error;
       }
     }, saved => {
-      setSubmitted({ classId, userId: user.id, registration: saved });
+      setSubmitted({ classId, userId: user?.id, registration: saved });
+      confirmation.reload();
       toast("Trạng thái đăng ký: " + saved.status);
       if (saved.status === "PENDING_PAYMENT") setPaying(saved.id);
     });
@@ -88,10 +97,10 @@ export function MemberClassDetailPage() {
           }</AsyncPanel></section>
         </div>
         <aside><Card className="member-booking">
-          <MemberClassRegistrationPanel classId={classId} memberId={user.memberId} confirmation={confirmation} registration={registration} coursePrice={detail.coursePrice} registrationOpen={detail.registrationOpen} pending={mutation.pending} onRegister={register} onProfile={() => navigate("/member/account")} onSchedule={() => navigate("/member/schedule")} onPay={() => setPaying(registration.id)} />
+          <MemberClassRegistrationPanel classId={classId} memberId={user?.memberId} confirmation={confirmation} registration={registration} coursePrice={detail.coursePrice} registrationOpen={detail.registrationOpen} hasPaymentHistory={hasPaymentHistory} pending={mutation.pending} onRegister={register} onProfile={() => navigate("/member/account")} onSchedule={() => navigate("/member/schedule")} onPay={() => setPaying(registration.id)} />
         </Card></aside>
       </div>;
     }}</AsyncPanel>
-    {paying && <RegistrationPaymentModal registrationId={paying} customerView onClose={() => { setPaying(null); confirmation.reload(); }} />}
+    {paying && <RegistrationPaymentModal registrationId={paying} customerView onClose={() => { setPaying(null); confirmation.reload(); paymentsQuery.reload(); }} />}
   </>;
 }

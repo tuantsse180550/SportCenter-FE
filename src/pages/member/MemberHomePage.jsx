@@ -5,7 +5,7 @@ import { AsyncPanel } from "../../components/common/AsyncPanel.jsx";
 import { ResultCard, SessionCard, SportImage, RegistrationHistory } from "../../components/member/MemberUI.jsx";
 import { memberService, scheduleService, trainingResultService } from "../../services/index.js";
 import { useApp } from "../../store/useApp.js";
-import { registrationApi, paymentApi } from "../../services/api/resources.js";
+import { classApi, registrationApi, paymentApi } from "../../services/api/resources.js";
 import { useQuery } from "../../store/useQuery.js";
 import { formatters } from "../../utils/formatters.js";
 
@@ -37,22 +37,22 @@ function RecentResults({ memberId }) {
 }
 
 function ConfirmedRegisteredClasses({ memberId }) {
-  const query = useQuery(async () => { const [registrations, payments] = await Promise.all([registrationApi.list(), paymentApi.list()]); return { registrations, payments }; }, [memberId]);
-  return <AsyncPanel query={query}>{data => <RegistrationHistory sectionId={null} registrations={data.registrations} payments={data.payments} />}</AsyncPanel>;
+  const query = useQuery(async () => { const [registrations, payments, classes] = await Promise.all([registrationApi.list(), paymentApi.list(), classApi.list()]); return { registrations, payments, classes }; }, [memberId]);
+  return <AsyncPanel query={query}>{data => <RegistrationHistory sectionId={null} registrations={data.registrations} payments={data.payments} classes={data.classes} onChanged={query.reload} />}</AsyncPanel>;
 }
 
 export function MemberHomePage() {
   const navigate = useNavigate();
   const { user } = useApp();
   const location = useLocation();
-  const profile = useQuery(() => memberService.getMyProfile(), [user.id]);
+  const profile = useQuery(() => user?.id ? memberService.getMyProfile() : Promise.resolve(null), [user?.id]);
   useEffect(() => {
     if (location.hash === "#registrations") document.getElementById("registrations")?.scrollIntoView({ block: "start" });
   }, [location.hash, profile.loading]);
   return <>
     <section className="member-hero">
       <div><span className="member-eyebrow">Một ngày năng động bắt đầu từ bạn</span>
-        <h1>Hôm nay của {profile.data?.name || user.name || "bạn"}</h1>
+        <h1>Hôm nay của {profile.data?.name || user?.name || "bạn"}</h1>
         <p>{profile.data?.goal || "Tìm lớp học phù hợp, theo dõi lịch học và cùng huấn luyện viên tiến bộ mỗi ngày."}</p>
         <div className="member-card-actions"><Button onClick={() => navigate("/member/classes")}>Khám phá lớp học</Button><Button variant="secondary" onClick={() => navigate("/member/schedule")}>Xem lịch học</Button></div>
       </div><SportImage className="member-hero-photo" />

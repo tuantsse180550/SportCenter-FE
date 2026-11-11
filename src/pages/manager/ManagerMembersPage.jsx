@@ -12,10 +12,12 @@ import { useQuery } from "../../store/useQuery.js";
 export function ManagerMembersPage() {
   const [deleting, setDeleting] = useState(null);
   const { toast } = useApp();
-  const [filters, setFilters] = useState({ query: "", level: "" }); const [selectedId, setSelectedId] = useState(null); const query = useQuery(() => memberService.listMembers(filters), [filters]);
+  const [filters, setFilters] = useState({ query: "", level: "" }); const [selectedId, setSelectedId] = useState(null); const query = useQuery(() => memberService.listMembers());
   return <><PageHeader title="Thành viên" subtitle="Hồ sơ thành viên và thông tin đăng ký lớp học." /><Card className="filters"><input value={filters.query} onChange={(e) => setFilters({ ...filters, query: e.target.value })} placeholder="Tìm tên, số điện thoại, mã thành viên..." /><select value={filters.level} onChange={(e) => setFilters({ ...filters, level: e.target.value })}><option value="">Tất cả trình độ</option>{["BEGINNER", "INTERMEDIATE", "ADVANCED"].map((v) => <option key={v} value={v}>{uiLabel(v)}</option>)}</select></Card><AsyncPanel query={query}>{members => {
+    const needle = filters.query.trim().toLocaleLowerCase("vi");
+    const visible = members.filter(m => (!needle || [m.fullName, m.account?.email, m.phone, m.id].filter(Boolean).join(" ").toLocaleLowerCase("vi").includes(needle)) && (!filters.level || m.level === filters.level));
     const selected = members.find(m => m.id === selectedId);
-    return <><MemberTable members={members} onOpen={m => setSelectedId(m.id)} />{selected && <MemberDrawer member={selected} onClose={() => setSelectedId(null)} onDelete={() => { setSelectedId(null); setDeleting(selected); }} />}</>;
+    return <><MemberTable members={visible} onOpen={m => setSelectedId(m.id)} />{selected && <MemberDrawer member={selected} onClose={() => setSelectedId(null)} onDelete={() => { setSelectedId(null); setDeleting(selected); }} />}</>;
   }}</AsyncPanel>
     {deleting && <ConfirmDelete title="Xóa hồ sơ học viên" name={deleting.name} onClose={() => setDeleting(null)}
       onDelete={() => memberApi.remove(deleting.id)} onDeleted={() => { setDeleting(null); toast("Đã xóa hồ sơ học viên"); }}>
