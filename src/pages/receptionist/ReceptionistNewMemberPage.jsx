@@ -1,12 +1,14 @@
-import { uiLabel } from "../../utils/vietnamese.js";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button, Card, Field, PageHeader, SelectField } from "../../components/common/UI.jsx";
 import { ErrorMessage } from "../../components/common/AsyncPanel.jsx";
-import { memberService } from "../../services/index.js";
+import { memberProfileApi } from "../../services/api/resources.js";
 import { useApp } from "../../store/useApp.js";
 import { useMutation } from "../../store/useQuery.js";
+import { uiLabel } from "../../utils/vietnamese.js";
 export function ReceptionistNewMemberPage() {
-  const navigate = useNavigate(); const { toast } = useApp(); const mutation = useMutation(); const [form, setForm] = useState({ userId: "", fullName: "", phone: "", goal: "", level: "BEGINNER" }); const update = (key, value) => setForm((old) => ({ ...old, [key]: value }));
-  return <><PageHeader title="Hồ sơ thành viên mới" subtitle="Sử dụng mã tài khoản thành viên đã có. Thành viên cần đăng ký tài khoản trước khi tạo hồ sơ." /><Card><div className="form-grid">{[["userId", "Mã tài khoản thành viên"], ["fullName", "Họ và tên"], ["phone", "Số điện thoại"], ["goal", "Mục tiêu"]].map(([key, label]) => <Field key={key} label={label} value={form[key]} onChange={(v) => update(key, v)} />)}<SelectField label="Trình độ" value={form.level} onChange={(v) => update("level", v)}>{["BEGINNER", "INTERMEDIATE", "ADVANCED"].map((v) => <option key={v} value={v}>{uiLabel(v)}</option>)}</SelectField></div><p>Thao tác này không tạo gói hội viên hoặc giao dịch thanh toán.</p><ErrorMessage error={mutation.error} /><Button disabled={mutation.pending || !/^[a-f0-9]{24}$/i.test(form.userId) || !form.fullName.trim() || !form.phone.trim() || !form.goal.trim()} onClick={() => mutation.run(() => memberService.createMember(form), (member) => { toast("Đã tạo hồ sơ thành viên"); navigate("/receptionist/members/" + member.id); })}>{mutation.pending ? "Đang tạo..." : "Tạo hồ sơ thành viên"}</Button></Card></>;
+  const navigate = useNavigate(); const { toast } = useApp(); const mutation = useMutation();
+  const [form, setForm] = useState({ email: "", password: "", fullName: "", phone: "", goal: "", level: "BEGINNER" });
+  const update = (key, value) => setForm(old => ({ ...old, [key]: value }));
+  return <><PageHeader title="Đăng ký thành viên tại quầy" subtitle="Tạo tài khoản thành viên và hồ sơ tập luyện trong cùng một thao tác." /><Card><form onSubmit={event => { event.preventDefault(); mutation.run(() => memberProfileApi.frontDesk(form), member => { toast("Đã tạo tài khoản thành viên"); navigate("/receptionist/members/" + member.id); }); }}><div className="form-grid">{[["email", "Email", "email"], ["password", "Mật khẩu ban đầu (ít nhất 6 ký tự)", "password"], ["fullName", "Họ và tên", "text"], ["phone", "Số điện thoại", "tel"], ["goal", "Mục tiêu tập luyện", "text"]].map(([key, label, type]) => <Field required key={key} label={label} type={type} value={form[key]} onChange={value => update(key, value)} />)}<SelectField label="Trình độ" value={form.level} onChange={value => update("level", value)}>{["BEGINNER", "INTERMEDIATE", "ADVANCED"].map(value => <option key={value} value={value}>{uiLabel(value)}</option>)}</SelectField></div><ErrorMessage error={mutation.error} /><Button type="submit" disabled={mutation.pending || form.password.length < 6 || !form.fullName.trim() || !form.phone.trim() || !form.goal.trim()}>{mutation.pending ? "Đang tạo..." : "Tạo tài khoản thành viên"}</Button></form></Card></>;
 }

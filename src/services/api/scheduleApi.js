@@ -1,4 +1,4 @@
-import { scheduleApi, registrationApi, attendanceApi, workoutPlanApi, coachApi } from "./resources.js";
+import { scheduleApi, registrationApi, attendanceApi, workoutPlanApi, coachApi, classApi } from "./resources.js";
 import { ApiError } from "../../api/apiClient.js";
 import { authService } from "./authApi.js";
 import { matchesAttendanceSession, coachAttendanceSession } from "./attendanceIdentity.js";
@@ -31,9 +31,17 @@ export const scheduleService = {
     const user = authService.getCurrentUser();
     if (user?.role === "COACH" && (!user.coachId || item.coachId !== user.coachId)) throw new ApiError("You are not assigned to this session.", { status: 403 });
     const identity = isCoach ? coachAttendanceSession(item) : item;
-    const [registrations, attendance, plans] = await Promise.all([isCoach ? coachApi.myStudents() : registrationApi.list(), isCoach ? attendanceApi.forSchedule(id) : attendanceApi.list(), workoutPlanApi.list()]);
+    const [registrations, attendance, plans] = await Promise.all([isCoach ? coachApi.myStudents() : registrationApi.list(), isCoach ? attendanceApi.forSchedule(id) : attendanceApi.list(), isCoach || user?.role === "CENTER_MANAGER" ? workoutPlanApi.list() : Promise.resolve([])]);
     const members = registrations.filter(r => r.classId === item.classId && r.status === "CONFIRMED").map(r => r.member).filter(Boolean);
     return { ...item, attendanceDateTime: identity.dateTime, attendanceAmbiguous: sessions.filter(s => matchesAttendanceSession(isCoach ? coachAttendanceSession(s) : s, identity)).length > 1, members, attendance: attendance.filter(a => matchesAttendanceSession(a, identity)), plans: plans.filter(p => p.classId === item.classId || (!p.classId && members.some(m => m.id === p.memberId))) };
   },
-  async getCoachScheduleSummary(coachId) { const sessions = await this.getCoachSessions(coachId); const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Ho_Chi_Minh" }).format(new Date()); return { sessions, today: sessions.filter((s) => s.date === today), upcoming: sessions.filter((s) => s.status === "SCHEDULED"), completed: sessions.filter((s) => s.status === "COMPLETED"), memberCount: sessions.reduce((total, s) => total + s.memberCount, 0) }; },
+  async getCoachScheduleSummary(coachId) {
+    const [sessions, roster, classes] = await Promise.all([this.getCoachSessions(coachId), coachApi.myStudents(), classApi.list()]);
+    const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Ho_Chi_Minh" }).format(new Date());
+    const assignedClasses = classes.filter(row => row.coachId === coachId);
+    return { sessions, assignedClasses, today: sessions.filter(row => row.date === today && row.status !== "CANCELLED"),
+      upcoming: sessions.filter(row => row.status === "SCHEDULED" && Date.parse(row.date + "T" + row.endTime + ":00+07:00") >= Date.now()),
+      completed: sessions.filter(row => row.status === "COMPLETED"), classCount: assignedClasses.length,
+      memberCount: new Set(roster.map(row => row.memberId)).size };
+  },
 };

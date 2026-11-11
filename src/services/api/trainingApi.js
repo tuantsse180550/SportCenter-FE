@@ -1,8 +1,8 @@
-import { workoutPlanApi, workoutResultApi, memberApi, classApi } from "./resources.js";
+import { workoutPlanApi, workoutResultApi, coachApi, classApi } from "./resources.js";
 import { ApiError } from "../../api/apiClient.js";
 export const trainingPlanService = {
   async listPlans(coachId) { if (!coachId) throw new ApiError("Coach profile is missing."); return (await workoutPlanApi.list()).filter((p) => p.coachId === coachId); },
-  async getFormOptions(coachId) { const [members, classes] = await Promise.all([memberApi.list(), classApi.list()]); return { members, classes: classes.filter((c) => c.coachId === coachId) }; },
+  async getFormOptions(coachId) { const [roster, classes] = await Promise.all([coachApi.myStudents(), classApi.list()]); return { members: [...new Map(roster.map(row => [row.memberId, row.member])).values()], classes: classes.filter((c) => c.coachId === coachId) }; },
   createPlan(input) {
     if (Boolean(input.memberId) === Boolean(input.classId)) throw new ApiError("Chọn kế hoạch cá nhân hoặc kế hoạch chung cho lớp, không chọn cả hai.", { status: 400 });
     return workoutPlanApi.create({ ...input, memberId: input.memberId || null, classId: input.classId || null, source: "COACH" });

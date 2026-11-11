@@ -4,11 +4,11 @@ import { classTuition } from "../../utils/classTuition.js";
 export const coachService = { listCoaches: () => coachApi.list() };
 export const classService = {
   // Member catalog metadata does not require the staff-only registration list.
-  listMemberClasses: () => classApi.list(),
+  async listMemberClasses() { return (await classApi.list()).filter(item => item.course && item.course.status !== "INACTIVE"); },
   async getMemberClassDetail(id) {
     const detail = (await classApi.list()).find(item => item.id === id);
     if (!detail) return null;
-    return { ...detail, coursePrice: classTuition(detail) };
+    return { ...detail, coursePrice: classTuition(detail), registrationOpen: detail.course?.status !== "INACTIVE" };
   },
   async getMemberClassSessions(id) {
     return (await scheduleApi.list()).filter(session => session.classId === id)

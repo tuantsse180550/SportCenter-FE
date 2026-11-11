@@ -2,9 +2,10 @@ import { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button, Card, EmptyState, PageHeader } from "../../components/common/UI.jsx";
 import { AsyncPanel } from "../../components/common/AsyncPanel.jsx";
-import { ResultCard, SessionCard, SportImage, StatusBadge } from "../../components/member/MemberUI.jsx";
+import { ResultCard, SessionCard, SportImage, RegistrationHistory } from "../../components/member/MemberUI.jsx";
 import { memberService, scheduleService, trainingResultService } from "../../services/index.js";
 import { useApp } from "../../store/useApp.js";
+import { registrationApi, paymentApi } from "../../services/api/resources.js";
 import { useQuery } from "../../store/useQuery.js";
 import { formatters } from "../../utils/formatters.js";
 
@@ -36,25 +37,8 @@ function RecentResults({ memberId }) {
 }
 
 function ConfirmedRegisteredClasses({ memberId }) {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const query = useQuery(() => scheduleService.getMemberSchedule(memberId), [memberId]);
-  useEffect(() => {
-    if (!query.loading && !query.error && location.hash === "#registrations") document.getElementById("registrations")?.scrollIntoView({ block: "start" });
-  }, [query.loading, query.error, location.hash]);
-  return <AsyncPanel query={query}>{sessions => {
-    // /schedules/my is scoped by BE to this JWT's CONFIRMED registrations.
-    // Keep past/completed sessions too; a class is not just an upcoming lesson.
-    const classes = [...new Map(sessions.filter(session => session.classId && session.registrationStatus === "CONFIRMED")
-      .map(session => [session.classId, { ...session.classItem, id: session.classId, registrationStatus: session.registrationStatus }])).values()];
-    return classes.length ? <>
-      <p className="member-muted" role="status">{classes.length} lớp đã xác nhận có lịch học</p>
-      <div className="member-registration-list">{classes.map(item => <Card key={item.id} className="member-registration">
-        <div>{item.sport && <span className="member-eyebrow">{item.sport}</span>}<h3>{item.name || "Chưa có thông tin tên lớp"}</h3>{item.coach?.name && <p>Huấn luyện viên: {item.coach.name}</p>}</div>
-        <div className="member-registration-state"><span>Đăng ký</span><StatusBadge status={item.registrationStatus} /><Button variant="secondary" onClick={() => navigate("/member/classes/" + item.id)}>Xem chi tiết lớp</Button></div>
-      </Card>)}</div>
-    </> : <Card><EmptyState title="Chưa có lớp đã xác nhận trong dữ liệu lịch học" text="Nếu bạn đã đăng ký hoặc thanh toán, lớp có thể chưa được xác nhận hoặc chưa có lịch học. Vui lòng liên hệ trung tâm để kiểm tra." /></Card>;
-  }}</AsyncPanel>;
+  const query = useQuery(async () => { const [registrations, payments] = await Promise.all([registrationApi.list(), paymentApi.list()]); return { registrations, payments }; }, [memberId]);
+  return <AsyncPanel query={query}>{data => <RegistrationHistory sectionId={null} registrations={data.registrations} payments={data.payments} />}</AsyncPanel>;
 }
 
 export function MemberHomePage() {
@@ -78,8 +62,7 @@ export function MemberHomePage() {
       <Card className="member-section"><PageHeader title="Hoàn thiện hồ sơ để bắt đầu" subtitle="Thêm họ tên, số điện thoại và mục tiêu tập luyện để đăng ký lớp học." /><Button onClick={() => navigate("/member/account")}>Hoàn thiện hồ sơ</Button></Card>
     }</AsyncPanel>
     <section id="registrations" className="member-section">
-      <div className="member-section-heading"><h2>Lớp đã đăng ký</h2></div>
-      <p className="member-muted">Mục này hiển thị các lớp đã xác nhận có lịch học. Danh sách chưa bao gồm lớp chưa xếp lịch hoặc đăng ký chờ thanh toán; thông tin giao dịch thanh toán chưa tra cứu được tại đây.</p>
+      <p className="member-muted">Tất cả đăng ký của bạn, bao gồm lớp chưa xếp lịch và đăng ký chờ thanh toán.</p>
       {profile.loading ? <Card><p role="status">Đang tải hồ sơ để xem lớp đã đăng ký...</p></Card> :
         profile.error ? <Card><p>Chưa thể tải lớp đã đăng ký do chưa đọc được hồ sơ. Vui lòng thử lại mục hồ sơ ở trên.</p></Card> :
         profile.data ? <ConfirmedRegisteredClasses memberId={profile.data.id} /> :

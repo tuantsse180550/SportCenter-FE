@@ -1,0 +1,7 @@
+@media print {
+  body * { visibility: hidden; }
+  .payment-print-receipt, .payment-print-receipt * { visibility: visible; }
+  .payment-print-receipt { position: fixed; inset: 0; background: white; color: black; padding: 20px; overflow: visible; }
+  .payment-print-receipt .info-grid { display: block; }
+  .payment-print-receipt .info-grid > div { display: flex; justify-content: space-between; gap: 20px; padding: 10px 0; border-bottom: 1px solid #ddd; }
+}
