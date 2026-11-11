@@ -29,6 +29,7 @@ export const paymentService = {
     const current = await this.getRegistrationPayment(classRegistrationId);
     if (current.registration?.status !== "PENDING_PAYMENT") throw new ApiError("This registration is no longer pending payment. Refresh to see its current status.");
     const existing = current.payments.find((p) => p.status === "PENDING");
+    if (existing && (existing.paymentProvider === "PAYOS" || existing.payosOrderCode != null)) throw new ApiError("Giao dịch PayOS đang chờ trên ứng dụng. Vui lòng hoàn tất hoặc xử lý giao dịch đó trước khi thanh toán trên Web.", { status: 409, code: "MOBILE_PAYMENT_PENDING" });
     if (existing && existing.paymentMethod !== paymentMethod) throw new ApiError("Đã có giao dịch chờ với phương thức khác. Vui lòng kiểm tra giao dịch hiện tại.");
     const payload = { classRegistrationId, paymentMethod };
     const payment = existing || await paymentApi.create(payload);

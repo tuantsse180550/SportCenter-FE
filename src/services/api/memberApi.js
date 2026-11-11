@@ -4,7 +4,7 @@ import { scheduleService } from "./scheduleApi.js";
 import { trainingResultService } from "./trainingApi.js";
 import { ApiError } from "../../api/apiClient.js";
 export const memberService = {
-  async listMembers(filters = {}) { const [members, registrations, classes] = await Promise.all([memberApi.list(), registrationApi.list(), classApi.list()]); return members.map((m) => ({ ...m, registeredClasses: registrations.filter((r) => r.memberId === m.id && r.status !== "CANCELLED").map((r) => classes.find((c) => c.id === r.classId)).filter(Boolean) })).filter((m) => (!filters.query || [m.fullName, m.phone, m.id].join(" ").toLowerCase().includes(filters.query.toLowerCase())) && (!filters.level || m.level === filters.level)); },
+  async listMembers(filters = {}) { const [members, registrations, classes] = await Promise.all([memberApi.list(), registrationApi.list(), classApi.list()]); return members.map((m) => ({ ...m, registeredClasses: registrations.filter((r) => r.memberId === m.id && r.status !== "CANCELLED").map((r) => classes.find((c) => c.id === r.classId)).filter(Boolean) })).filter((m) => (!filters.query || [m.fullName, m.account?.email, m.phone, m.id].join(" ").toLowerCase().includes(filters.query.toLowerCase())) && (!filters.level || m.level === filters.level)); },
   async getMyProfile() {
     try { return await memberProfileApi.get(); }
     catch (error) { if (error.status === 404 && error.code !== "INVALID_RESPONSE") return null; throw error; }

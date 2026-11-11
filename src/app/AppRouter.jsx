@@ -21,16 +21,19 @@ import { ManagerCoachesPage } from "../pages/manager/ManagerCoachesPage.jsx";
 import { ManagerCoachRequestsPage } from "../pages/manager/ManagerCoachRequestsPage.jsx";
 import { ManagerDashboardPage } from "../pages/manager/ManagerDashboardPage.jsx";
 import { ManagerMembersPage } from "../pages/manager/ManagerMembersPage.jsx";
-import { ManagerPackagesPage } from "../pages/manager/ManagerPackagesPage.jsx";
+import { ManagerAccountsPage } from "../pages/manager/ManagerAccountsPage.jsx";
 import { ManagerReportsPage } from "../pages/manager/ManagerReportsPage.jsx";
 import { ManagerRolesPage } from "../pages/manager/ManagerRolesPage.jsx";
 import { MemberAccountPage } from "../pages/member/MemberAccountPage.jsx";
-import { MemberAIPage } from "../pages/member/MemberAIPage.jsx";
+import { MemberTrainingPage } from "../pages/member/MemberTrainingPage.jsx";
+import { CoachHomeworkPage } from "../pages/coach/CoachHomeworkPage.jsx";
+import { CoachStudentsPage } from "../pages/coach/CoachStudentsPage.jsx";
+import { NotificationsPage } from "../pages/shared/NotificationsPage.jsx";
+import { SupportRequestsPage } from "../pages/shared/SupportRequestsPage.jsx";
 import { MemberClassDetailPage } from "../pages/member/MemberClassDetailPage.jsx";
 import { MemberPaymentsPage } from "../pages/member/MemberPaymentsPage.jsx";
 import { MemberClassesPage } from "../pages/member/MemberClassesPage.jsx";
 import { MemberHomePage } from "../pages/member/MemberHomePage.jsx";
-import { MemberMembershipPage } from "../pages/member/MemberMembershipPage.jsx";
 import { MemberResultsPage } from "../pages/member/MemberResultsPage.jsx";
 import { MemberSchedulePage } from "../pages/member/MemberSchedulePage.jsx";
 import { ForgotPasswordPage } from "../pages/public/ForgotPasswordPage.jsx";
@@ -45,6 +48,7 @@ import { ReceptionistMembersPage } from "../pages/receptionist/ReceptionistMembe
 import { ReceptionistNewMemberPage } from "../pages/receptionist/ReceptionistNewMemberPage.jsx";
 import { ReceptionistPaymentsPage } from "../pages/receptionist/ReceptionistPaymentsPage.jsx";
 import { ReceptionistAttendancePage } from "../pages/receptionist/ReceptionistAttendancePage.jsx";
+import { ReceptionistCheckInPage } from "../pages/receptionist/ReceptionistCheckInPage.jsx";
 import { AppProvider } from "../store/AppProvider.jsx";
 import { RoleGuard } from "./RoleGuard.jsx";
 
@@ -71,7 +75,10 @@ export function AppRouter() {
         <Route path="coaches" element={<ManagerCoachesPage />} />
         <Route path="classes/:classId" element={<ManagerClassDetailPage />} />
         <Route path="members" element={<ManagerMembersPage />} />
-        <Route path="packages" element={<ManagerPackagesPage />} />
+        <Route path="packages" element={<Navigate to="/manager/courses" replace />} />
+        <Route path="accounts" element={<ManagerAccountsPage />} />
+        <Route path="notifications" element={<NotificationsPage />} />
+        <Route path="support" element={<SupportRequestsPage />} />
         <Route path="coach-requests" element={<ManagerCoachRequestsPage />} />
         <Route path="reports" element={<ManagerReportsPage />} />
         <Route path="roles" element={<ManagerRolesPage />} />
@@ -85,6 +92,9 @@ export function AppRouter() {
         <Route path="schedule" element={<CoachSchedulePage />} />
         <Route path="sessions/:sessionId" element={<CoachSessionDetailPage />} />
         <Route path="training-plans" element={<CoachTrainingPlansPage />} />
+        <Route path="students" element={<CoachStudentsPage />} />
+        <Route path="homework" element={<CoachHomeworkPage />} />
+        <Route path="notifications" element={<NotificationsPage />} />
         <Route path="change-requests" element={<CoachChangeRequestsPage />} />
       </Route>
     </Route>
@@ -98,9 +108,12 @@ export function AppRouter() {
         <Route path="payments" element={<MemberPaymentsPage />} />
         <Route path="attendance" element={<MemberAttendancePage />} />
         <Route path="schedule" element={<MemberSchedulePage />} />
-        <Route path="membership" element={<MemberMembershipPage />} />
+        <Route path="membership" element={<Navigate to="/member/payments" replace />} />
         <Route path="results" element={<MemberResultsPage />} />
-        <Route path="ai" element={<MemberAIPage />} />
+        <Route path="ai" element={<Navigate to="/member/home" replace />} />
+        <Route path="training" element={<MemberTrainingPage />} />
+        <Route path="notifications" element={<NotificationsPage />} />
+        <Route path="support" element={<SupportRequestsPage />} />
         <Route path="account" element={<MemberAccountPage />} />
       </Route>
     </Route>
@@ -113,7 +126,10 @@ export function AppRouter() {
         <Route path="members/:memberId" element={<ReceptionistMemberDetailPage />} />
         <Route path="payments" element={<ReceptionistPaymentsPage />} />
         <Route path="attendance" element={<ReceptionistAttendancePage />} />
+        <Route path="check-in" element={<ReceptionistCheckInPage />} />
         <Route path="invoices" element={<ReceptionistInvoicesPage />} />
+        <Route path="notifications" element={<NotificationsPage />} />
+        <Route path="support" element={<SupportRequestsPage />} />
       </Route>
     </Route>
 

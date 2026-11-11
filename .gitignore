@@ -143,9 +143,15 @@ vite.config.ts.timestamp-*
 .vite/
 
 # Local tests, internal documents and development utilities
-/tests/
+/tests/*
+!/tests/*.test.mjs
+!/tests/networkFixture.mjs
+!/tests/receiptDomFixture.mjs
 /docs/
-/scripts/
+/scripts/*
+!/scripts/backendContracts.mjs
+!/scripts/realisticSeedPlan.mjs
+!/scripts/runTests.mjs
 
 # Screenshots, traces and generated test artifacts
 **/screenshots/

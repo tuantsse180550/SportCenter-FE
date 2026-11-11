@@ -19,6 +19,11 @@ function resource(path, normalizer, fields, { create = true, update = true, remo
 }
 export const memberApi = resource("members", normalize.person, ["userId", "fullName", "phone", "goal", "level"], { remove: true, updateFields: ["fullName", "phone", "goal", "level"] });
 export const memberProfileApi = {
+  async frontDesk(input) {
+    const data = await apiClient("/api/members/front-desk", { method: "POST", body: normalize.pick(input, ["email", "password", "fullName", "phone", "goal", "level"]) });
+    if (data?.user?.role !== "MEMBER" || normalize.idOf(data.member?.userId) !== data.user.id) throw new ApiError("Phản hồi tạo tài khoản không hợp lệ. Vui lòng kiểm tra trước khi thử lại.", { code: "INVALID_RESPONSE" });
+    return record(data.member, normalize.person, "members/front-desk");
+  },
   async get() { return record(await apiClient("/api/members/me"), normalize.person, "members/me"); },
   async create(input) { return record(await apiClient("/api/members/me", { method: "POST", body: normalize.pick(input, ["fullName", "phone", "goal", "level"]) }), normalize.person, "members/me"); },
   async update(input) { return record(await apiClient("/api/members/me", { method: "PUT", body: normalize.pick(input, ["fullName", "phone", "goal", "level"]) }), normalize.person, "members/me"); },
@@ -33,7 +38,7 @@ export const coachApi = {
       const member = record(row?.member, normalize.person, "coaches/my-students");
       const classId = normalize.idOf(row?.class);
       if (!classId) throw new ApiError("Invalid coach student class response", { code: "INVALID_RESPONSE" });
-      return { classId, memberId: member.id, member, status: "CONFIRMED", registeredAt: row.registeredAt };
+      return { classId, className: row.class?.name, memberId: member.id, member, status: "CONFIRMED", registeredAt: row.registeredAt };
     });
   },
   async createAccount(input) {
@@ -97,8 +102,9 @@ export const attendanceApi = {
   },
 };
 export const workoutPlanApi = resource("workout-plans", normalize.workoutPlan, ["coachId", "memberId", "classId", "goal", "level", "plan", "source", "status"], { remove: true });
-export const workoutResultApi = resource("workout-results", normalize.workoutResult, ["workoutPlanId", "memberId", "result", "comment"], { updateFields: ["result", "comment"] });
+export const workoutResultApi = resource("workout-results", normalize.workoutResult, ["workoutPlanId", "memberId", "scheduleId", "result", "comment"], { updateFields: ["result", "comment"] });
 export const paymentApi = {
+  recordOffline(id) { return apiClient("/api/payments/" + encodeURIComponent(id) + "/record-payment", { method: "POST", body: {} }); },
   verifyReturn(query, { signal } = {}) { return apiClient("/api/payments/vnpay/verify-return", { method: "POST", body: query, signal }); },
   status(id, { signal } = {}) { return apiClient("/api/payments/" + encodeURIComponent(id) + "/status", { signal }); },
   ...resource("payments", normalize.payment, ["classRegistrationId", "paymentMethod"]),
@@ -106,9 +112,27 @@ export const paymentApi = {
   simulate(id, status) { return apiClient("/api/payments/" + encodeURIComponent(id) + "/simulate", { method: "POST", body: { status } }); },
   vnpay(id) { return apiClient("/api/payments/" + encodeURIComponent(id) + "/vnpay", { method: "POST" }); },
 };
-export const activityLogApi = resource("activity-logs", normalize.entity, ["userId", "action"], { update: false });
-export const notificationApi = resource("notifications", normalize.entity, ["userId", "title", "message", "isRead"], { createFields: ["userId", "title", "message"], updateFields: ["isRead"] });
-export const supportRequestApi = resource("support-requests", normalize.entity, ["memberId", "message", "status"], { createFields: ["memberId", "message"], updateFields: ["status"] });
+export const activityLogApi = resource("activity-logs", normalize.entity, ["action"], { update: false });
+export const notificationApi = {
+  ...resource("notifications", normalize.entity, ["userId", "title", "message", "isRead"], { createFields: ["userId", "title", "message"], updateFields: ["isRead"] }),
+  async my() { const rows = await apiClient("/api/notifications/my"); if (!Array.isArray(rows)) throw new ApiError("Invalid notification response"); return rows.map(normalize.entity); },
+};
+export const supportRequestApi = {
+  ...resource("support-requests", normalize.entity, ["memberId", "message"], { update: false }),
+  async update(id, input) { return record(await apiClient("/api/support-requests/" + encodeURIComponent(id) + "/status", { method: "PUT", body: normalize.pick(input, ["status", "note"]) }), normalize.entity, "support-requests/status"); },
+};
+export const homeworkApi = {
+  async my() { const rows = await apiClient("/api/homeworks/my"); if (!Array.isArray(rows)) throw new ApiError("Invalid homework response"); return rows.map(normalize.entity); },
+  create(input) { return apiClient("/api/homeworks", { method: "POST", body: normalize.pick(input, ["classId", "memberId", "title", "description", "dueDate", "attachments"]) }); },
+};
+export const staffApi = {
+  async list() { const rows = await apiClient("/api/staff/accounts"); if (!Array.isArray(rows)) throw new ApiError("Invalid account response"); return rows.map(normalize.entity); },
+  create(input) { return apiClient("/api/staff/accounts", { method: "POST", body: normalize.pick(input, ["email", "password", "role", "fullName", "phone", "subjectId"]) }); },
+  async update(id, input) { return record(await apiClient("/api/staff/accounts/" + encodeURIComponent(id), { method: "PUT", body: normalize.pick(input, ["fullName", "phone", "status"]) }), normalize.entity, "staff/accounts"); },
+};
+export const reportApi = {
+  summary({ from, to } = {}) { const params = new URLSearchParams(); if (from) params.set("from", from); if (to) params.set("to", to); return apiClient("/api/reports/summary" + (params.size ? "?" + params : "")); },
+};
 export const lessonApi = {
   ...resource("lessons", normalize.entity, ["classId", "learningPathId", "title", "description", "order"], { remove: true }),
   async templates() {
